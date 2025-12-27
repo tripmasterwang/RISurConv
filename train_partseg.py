@@ -64,6 +64,8 @@ def main(args):
         logger.info(str)
         print(str)
 
+    
+
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
@@ -159,6 +161,7 @@ def main(args):
     best_class_avg_iou = 0
     best_inctance_avg_iou = 0
 
+    log_string('without class label support')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
@@ -179,9 +182,9 @@ def main(args):
             optimizer.zero_grad()
             points = points.data.numpy()
 
-            log_string('without data augmentation_train_partseg.py, line 182')
-            # points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3]) # 随机缩放
-            # points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3]) # 随机平移
+            # log_string('without data augmentation_train_partseg.py, line 182')
+            points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3]) # 随机缩放
+            points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3]) # 随机平移
             
             points = torch.Tensor(points)
             points, label, target = points.float().cuda(), label.long().cuda(), target.long().cuda()
