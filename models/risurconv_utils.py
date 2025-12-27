@@ -325,7 +325,7 @@ def RISP_features(xyz, norm, new_xyz, new_norm, idx, group_all=False):
     num_neighbor = idx.shape[-1]
     dots_sorted, idx_ordered = order_index(xyz, new_xyz, new_norm.unsqueeze(-1), idx)
     
-    grouped_center = index_points(xyz, idx_ordered)  # [B, npoint, nsample, C]
+    grouped_center = index_points(xyz, idx_ordered)  # [B, npoint, nsample, 3]
     xi_norm=index_points(norm, idx_ordered)             # xi norm
     if not group_all:
         xi = grouped_center - new_xyz.view(B, N, 1, C)  # xi
@@ -368,9 +368,10 @@ def RISP_features(xyz, norm, new_xyz, new_norm, idx, group_all=False):
     new_feature=calculate_new_surface_feature(x4,x4_norm,p_point,p_norm,xi,xi_norm,x3,x3_norm)
     ri_feat = torch.cat([ri_feat, new_feature], dim=-1)
 
-    return ri_feat, idx_ordered
+    return grouped_center, idx_ordered
 
 def sample_and_group(npoint, radius, nsample, xyz, norm):
+    # 512; 0.2; 8; 16,2048,3; 16,2048,3
     """
     Input:
         npoint: number of new points
@@ -388,10 +389,11 @@ def sample_and_group(npoint, radius, nsample, xyz, norm):
     norm = norm.contiguous()
  
     new_xyz, new_norm = sample(npoint, xyz, norm=norm, sampling='fps')
+    #16,512,3； 16,512,3；
     idx = group_index(nsample, radius, xyz, new_xyz, group='knn')
-    
+    #16,512,8
     ri_feat, idx_ordered = RISP_features(xyz, norm, new_xyz, new_norm, idx)
-
+    #16,512,8,14；16,512,8
     
     return new_xyz, ri_feat, new_norm, idx_ordered
     
@@ -477,7 +479,7 @@ class RISurConvSetAbstraction(nn.Module):
         self.nsample = nsample
         self.group_all = group_all
         
-        raw_in_channel= [14, 32]
+        raw_in_channel= [3, 32]
         raw_out_channel=[32, 64]
         
         self.embedding=nn.Sequential(
@@ -513,7 +515,7 @@ class RISurConvSetAbstraction(nn.Module):
             new_xyz, ri_feat, new_norm, idx = sample_and_group_all(xyz, norm)
         else:
             new_xyz, ri_feat, new_norm, idx = sample_and_group(self.npoint, self.radius, self.nsample, xyz, norm)
-
+            # new_xyz:[b,256,3];  ri_feat:[b,256,16,14];  new_norm:[b,256,3];   idx:[b,256,16]
         # embed
         ri_feat=F.relu(self.embedding(ri_feat.permute(0, 3, 2, 1)))  
 
@@ -530,12 +532,12 @@ class RISurConvSetAbstraction(nn.Module):
         else:
             new_points = ri_feat
 
-        new_points = F.relu(self.risurconv(new_points))
+        new_points = F.relu(self.risurconv(new_points))  #128,16,256；  16是紧邻数
 
         risur_feat = torch.max(new_points, 2)[0]  # maxpooling
         risur_feat = self.self_attention_1(risur_feat)
         
-        return new_xyz, new_norm, risur_feat
+        return new_xyz, new_norm, risur_feat   #256个点，纬度分别是3,3,128
 
 
 
@@ -548,7 +550,7 @@ class RIConv2FeaturePropagation(nn.Module):
         self.mlp_bns = nn.ModuleList()
 
         # lift to 64
-        raw_in_channel= [14, 32]
+        raw_in_channel= [3, 32]
         raw_out_channel=[32, 64]
         
         self.embedding=nn.Sequential(
