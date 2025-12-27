@@ -95,7 +95,7 @@ def main(args):
     log_string('PARAMETER ...')
     log_string(args)
 
-    root = '../data/shapenetcore_partanno_segmentation_benchmark_v0_normal/'
+    root = '/data2/wangyuansong/data/PointMAEdata/shapenetcore_partanno_segmentation_benchmark_v0_normal'
 
     TRAIN_DATASET = PartNormalDataset(root=root, npoints=args.npoint, split='trainval', normal_channel=args.normal)
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
@@ -178,8 +178,11 @@ def main(args):
         for i, (points, label, target) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
             optimizer.zero_grad()
             points = points.data.numpy()
-            points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3])
-            points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
+
+            log_string('without data augmentation_train_partseg.py, line 182')
+            # points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3]) # 随机缩放
+            # points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3]) # 随机平移
+            
             points = torch.Tensor(points)
             points, label, target = points.float().cuda(), label.long().cuda(), target.long().cuda()
 
