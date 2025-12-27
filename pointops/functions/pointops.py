@@ -12,6 +12,26 @@ except ImportError:
     from torch.utils.cpp_extension import load
     warnings.warn("Unable to load pointops_cuda cpp extension.")
     pointops_cuda_src = os.path.join(os.path.dirname(__file__), "../src")
+    
+    # 检测GPU架构并设置CUDA编译标志
+    # 关键：使用环境变量TORCH_CUDA_ARCH_LIST覆盖PyTorch的自动检测
+    # 使用compute_75作为通用兼容架构（可以在大多数现代GPU上运行）
+    # 这样可以避免nvcc版本不兼容的问题
+    if torch.cuda.is_available():
+        # 获取当前GPU的计算能力
+        device = torch.cuda.current_device()
+        compute_cap = torch.cuda.get_device_capability(device)
+        compute_version = f"{compute_cap[0]}{compute_cap[1]}"
+        
+        # 对于所有架构，统一使用compute_75（向后兼容，可以在8.6 GPU上运行）
+        # 这样可以避免不同nvcc版本对compute_80/86支持不一致的问题
+        os.environ['TORCH_CUDA_ARCH_LIST'] = "7.5"
+        extra_cuda_cflags = ['-gencode=arch=compute_75,code=sm_75']
+    else:
+        # 如果没有CUDA，使用通用设置
+        os.environ['TORCH_CUDA_ARCH_LIST'] = "7.5"
+        extra_cuda_cflags = ['-gencode=arch=compute_75,code=sm_75']
+    
     pointops_cuda = load('pointops_cuda', [
         pointops_cuda_src + '/pointops_api.cpp',
         pointops_cuda_src + '/ballquery/ballquery_cuda.cpp',
@@ -32,7 +52,7 @@ except ImportError:
         pointops_cuda_src + '/labelstat/labelstat_cuda_kernel.cu',
         pointops_cuda_src + '/featuredistribute/featuredistribute_cuda.cpp',
         pointops_cuda_src + '/featuredistribute/featuredistribute_cuda_kernel.cu'
-    ], build_directory=pointops_cuda_src, verbose=False)
+    ], build_directory=pointops_cuda_src, verbose=False, extra_cuda_cflags=extra_cuda_cflags)
 
 
 class FurthestSampling(Function):

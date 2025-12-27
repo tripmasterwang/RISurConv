@@ -41,11 +41,21 @@ def square_distance(src, dst):
     Output:
         dist: per-point square distance, [B, N, M]
     """
-    B, N, _ = src.shape
+    # 确保输入张量是连续的，避免 CUDA 错误
+    src = src.contiguous()
+    dst = dst.contiguous()
+    
+    # 检查并处理 NaN/Inf 值
+    if torch.isnan(src).any() or torch.isinf(src).any():
+        src = torch.nan_to_num(src, nan=0.0, posinf=1e6, neginf=-1e6)
+    if torch.isnan(dst).any() or torch.isinf(dst).any():
+        dst = torch.nan_to_num(dst, nan=0.0, posinf=1e6, neginf=-1e6)
+    
+    B, N, C = src.shape
     _, M, _ = dst.shape
-    dist = -2 * torch.matmul(src, dst.permute(0, 2, 1))
-    dist += torch.sum(src ** 2, -1).view(B, N, 1)
-    dist += torch.sum(dst ** 2, -1).view(B, 1, M)
+    
+    dist = torch.cdist(src, dst, p=2) ** 2
+    
     return dist
 
 def index_points(points, idx):
