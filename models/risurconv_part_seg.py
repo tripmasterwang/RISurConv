@@ -27,7 +27,7 @@ class get_model(nn.Module):
         self.fp3 = RIConv2FeaturePropagation(radius=1.5, nsample=64, in_channel=512+64, in_channel_2=512+256, out_channel=512, mlp=[512])
         self.fp2 = RIConv2FeaturePropagation(radius=0.8, nsample=32, in_channel=512+64, in_channel_2=512+128, out_channel=512, mlp=[256])
         self.fp1 = RIConv2FeaturePropagation(radius=0.48, nsample=32, in_channel=256+64, in_channel_2=256+64, out_channel=256, mlp=[128])
-        self.fp0 = RIConv2FeaturePropagation(radius=0.48, nsample=32,  in_channel=128+64, in_channel_2=128, out_channel=128, mlp=[])
+        self.fp0 = RIConv2FeaturePropagation(radius=0.48, nsample=32,  in_channel=128+64, in_channel_2=128+16, out_channel=128, mlp=[])
         self.conv1 = nn.Conv1d(128, 128, 1)
         self.bn1 = nn.BatchNorm1d(128)
         self.drop1 = nn.Dropout(0.4)
