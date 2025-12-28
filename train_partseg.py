@@ -95,7 +95,7 @@ def main(args):
     log_string('PARAMETER ...')
     log_string(args)
 
-    root = '../data/shapenetcore_partanno_segmentation_benchmark_v0_normal/'
+    root = '/data2/wangyuansong/data/PointMAEdata/shapenetcore_partanno_segmentation_benchmark_v0_normal/'
 
     TRAIN_DATASET = PartNormalDataset(root=root, npoints=args.npoint, split='trainval', normal_channel=args.normal)
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
@@ -158,7 +158,7 @@ def main(args):
     global_epoch = 0
     best_class_avg_iou = 0
     best_inctance_avg_iou = 0
-
+    log_string('reproduce version of segmentation, without any changes')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
