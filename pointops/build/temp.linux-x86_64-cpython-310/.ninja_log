@@ -1,0 +1,20 @@
+# ninja log v5
+2	7685	1766719182167477664	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/interpolation/interpolation_cuda.o	d3f4cd95152949e8
+3	7728	1766719182203477513	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/knnquery/knnquery_cuda.o	c4de2ade66ff04cc
+2	7766	1766719182243477342	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/grouping_int/grouping_int_cuda.o	bde88a24b1155273
+2	7897	1766719182379476765	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/grouping/grouping_cuda.o	39e73c06b6d1b2a0
+1	8006	1766719182487476307	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/featuredistribute/featuredistribute_cuda.o	9dde57bc0452dffd
+3	8045	1766719182523476154	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/knnquery_heap/knnquery_heap_cuda.o	9c7bffae857bd169
+0	8068	1766719182547476052	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/ballquery/ballquery_cuda.o	ad03a0e9fe4db2c0
+4	8187	1766719182663475559	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/sampling/sampling_cuda.o	8943891fbecd767a
+4	8331	1766719182807474949	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/labelstat/labelstat_cuda.o	72465d81dd0a5bd4
+4	19913	1766719194395425662	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/labelstat/labelstat_cuda_kernel.o	65075c53ae5d42bc
+3	20054	1766719194535425065	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/knnquery/knnquery_cuda_kernel.o	6e3295a6ff8b41ec
+1	20133	1766719194611424742	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/grouping_int/grouping_int_cuda_kernel.o	f3b9b4a30547450f
+1	20162	1766719194643424605	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/ballquery/ballquery_cuda_kernel.o	b4b08702ef8d4b93
+5	20377	1766719194859423685	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/sampling/sampling_cuda_kernel.o	c1a08d92330c5c60
+3	20461	1766719194939423343	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/interpolation/interpolation_cuda_kernel.o	9efc3cbe37f42ace
+3	20728	1766719195211422184	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/knnquery_heap/knnquery_heap_cuda_kernel.o	8922b288e5840072
+2	20868	1766719195351421587	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/featuredistribute/featuredistribute_cuda_kernel.o	8dbc201ff8ffc363
+2	21593	1766719196079418482	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/grouping/grouping_cuda_kernel.o	e59eb9c02cf5d298
+4	22195	1766719196667415973	/data2/wangyuansong/project2/RISurConv/pointops/build/temp.linux-x86_64-cpython-310/src/pointops_api.o	a816be1b0b4ebde8
