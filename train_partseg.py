@@ -158,7 +158,7 @@ def main(args):
     global_epoch = 0
     best_class_avg_iou = 0
     best_inctance_avg_iou = 0
-    log_string('without any data aug')
+    log_string('without any data augmentation')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
