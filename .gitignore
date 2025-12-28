@@ -1,0 +1,73 @@
+# Python 缓存文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 编译文件
+*.o
+*.so
+*.a
+*.dylib
+*.dll
+
+# 构建目录
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# 日志文件
+log/
+*.log
+logs/
+
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# 环境文件
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# 数据文件（如果很大，取消注释）
+# data/
+# *.h5
+# *.hdf5
+
+# 模型检查点（如果很大，取消注释）
+# *.pth
+# *.pt
+# *.ckpt
+# checkpoints/
+
+# CUDA 编译文件
+pointops/build/
+pointops/src/*.o
+pointops/src/*.so
+pointops/src/.ninja_deps
+pointops/src/.ninja_log
+pointops/src/build.ninja
+
+# 临时文件
+*.tmp
+*.bak
+*.cache
+
+# 系统文件
+Thumbs.db
+.DS_Store
+
