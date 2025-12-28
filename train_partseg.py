@@ -161,7 +161,7 @@ def main(args):
     best_class_avg_iou = 0
     best_inctance_avg_iou = 0
 
-    log_string('without class label support')
+    log_string('pointnet version, without rotation invariant features, only xyz')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
