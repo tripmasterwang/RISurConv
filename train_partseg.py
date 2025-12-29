@@ -18,6 +18,7 @@ from pathlib import Path
 from tqdm import tqdm
 from data_utils.ShapeNetDataLoader import PartNormalDataset
 
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
@@ -58,6 +59,7 @@ def parse_args():
     parser.add_argument('--step_size', type=int, default=20, help='decay step for lr decay')
     parser.add_argument('--lr_decay', type=float, default=0.5, help='decay rate for lr decay')
     return parser.parse_args()
+
 
 def main(args):
     def log_string(str):
@@ -115,7 +117,7 @@ def main(args):
     classifier = MODEL.get_model(num_part, normal_channel=args.normal).cuda()
     criterion = MODEL.get_loss().cuda()
     classifier.apply(inplace_relu)
-    
+
     def weights_init(m):
         classname = m.__class__.__name__
         if classname.find('Conv2d') != -1:
@@ -158,7 +160,7 @@ def main(args):
     global_epoch = 0
     best_class_avg_iou = 0
     best_inctance_avg_iou = 0
-    log_string('reproduce version of segmentation, without any changes')
+    log_string('This is pointmae version of segmentation')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))

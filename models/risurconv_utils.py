@@ -482,6 +482,10 @@ class RISurConvSetAbstraction(nn.Module):
             nn.Conv2d(raw_out_channel[1] + in_channel, out_channel, 1),
             nn.BatchNorm2d(out_channel)
         )
+        self.risurconv_pos=nn.Sequential(
+            nn.Conv2d(raw_out_channel[1] + in_channel, out_channel, 1),
+            nn.BatchNorm2d(out_channel)
+        )
         self.self_attention_1 = SA_Layer(out_channel) # 2nd SA layer
 
     def forward(self, xyz, norm, points):
@@ -519,13 +523,17 @@ class RISurConvSetAbstraction(nn.Module):
             new_points = torch.cat([ri_feat, grouped_points], dim=1)
         else:
             new_points = ri_feat
+            new_points_pos = new_points
 
         new_points = F.relu(self.risurconv(new_points))
+        new_points_pos = F.relu(self.risurconv_pos(new_points_pos))
 
         risur_feat = torch.max(new_points, 2)[0]  # maxpooling
+        risur_feat_pos = torch.max(new_points_pos, 2)[0]  # maxpooling
         risur_feat = self.self_attention_1(risur_feat)
+        risur_feat_pos = self.self_attention_1(risur_feat_pos)
         
-        return new_xyz, new_norm, risur_feat
+        return new_xyz, new_norm, risur_feat, risur_feat_pos
 
 
 
