@@ -47,7 +47,7 @@ def to_categorical(y, num_classes):
 def parse_args():
     parser = argparse.ArgumentParser('Model')
     parser.add_argument('--model', type=str, default='risurconv_part_seg', help='model name')
-    parser.add_argument('--batch_size', type=int, default=16, help='batch Size during training')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch Size during training')
     parser.add_argument('--epoch', default=250, type=int, help='epoch to run')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='initial learning rate')
     parser.add_argument('--gpu', type=str, default='0', help='specify GPU devices')
@@ -63,7 +63,11 @@ def parse_args():
 
 def main(args):
     def log_string(str):
-        logger.info(str)
+        try:
+            logger.info(str)
+        except (OSError, IOError) as e:
+            # 磁盘空间不足或其他IO错误时，只打印到控制台，不中断训练
+            print(f"[日志写入失败: {e}]", file=sys.stderr)
         print(str)
 
     '''HYPER PARAMETER'''
@@ -264,7 +268,7 @@ def main(args):
         log_string('Epoch %d test Accuracy: %f  Class avg mIOU: %f   Inctance avg IOU: %f' % (
             epoch + 1, test_metrics['accuracy'], test_metrics['class_avg_iou'], test_metrics['inctance_avg_iou']))
         if (test_metrics['inctance_avg_iou'] >= best_inctance_avg_iou):
-            logger.info('Save model...')
+            log_string('Save model...')
             savepath = str(checkpoints_dir) + '/best_model.pth'
             log_string('Saving at %s' % savepath)
             state = {
