@@ -519,7 +519,7 @@ class RISurConvSetAbstraction(nn.Module):
         # embed
         ri_feat=F.relu(self.embedding(ri_feat.permute(0, 3, 2, 1)))  
 
-        ri_feat = self.self_attention_0(ri_feat)
+        # ri_feat = self.self_attention_0(ri_feat)
 
         # concat previous layer features
         if points is not None:
