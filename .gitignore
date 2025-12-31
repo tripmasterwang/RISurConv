@@ -23,6 +23,9 @@ log/
 *.log
 logs/
 
+# checkpoints
+checkpoints/
+
 # IDE 文件
 .vscode/
 .idea/
