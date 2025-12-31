@@ -23,6 +23,32 @@ log/
 *.log
 logs/
 
+# checkpoints
+checkpoint/
+*.pth
+*.ckpt
+*.pth
+*.pt
+*.ckpt
+*.pth
+*.pt
+*.ckpt
+*.pth
+*.pt
+*.ckpt
+checkpoints/
+*.pt
+*.ckpt
+*.pth
+*.pt
+*.ckpt
+*.pth
+*.pt
+*.ckpt
+*.pth
+*.pt
+*.ckpt
+
 # IDE 文件
 .vscode/
 .idea/

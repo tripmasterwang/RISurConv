@@ -7,6 +7,7 @@ Website: https://wwww.zhiyuanzhang.net
 import argparse
 import os
 import torch
+import torch.nn as nn
 import datetime
 import logging
 import sys
@@ -16,8 +17,8 @@ import provider
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
+from typing import Tuple
 from data_utils.ShapeNetDataLoader import PartNormalDataset
-
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -43,11 +44,102 @@ def to_categorical(y, num_classes):
         return new_y.cuda()
     return new_y
 
+def load_pointmae_checkpoint(
+    model: nn.Module,
+    ckpt_path: str,
+    verbose: bool = True
+) -> Tuple[list, list]:
+    """
+    从 Point-MAE 预训练 checkpoint 加载权重到模型
+    
+    Args:
+        model: 目标模型（分割网络）
+        ckpt_path: checkpoint 文件路径
+        verbose: 是否打印详细信息
+    
+    Returns:
+        missing_keys: 缺失的键列表
+        unexpected_keys: 多余的键列表
+    """
+    if ckpt_path is None:
+        if verbose:
+            print("No checkpoint path provided, training from scratch!")
+        return [], []
+    
+    # 加载 checkpoint
+    ckpt = torch.load(ckpt_path, map_location='cpu')
+    
+    # 提取模型权重
+    if 'base_model' in ckpt:
+        base_ckpt = ckpt['base_model']
+    elif 'model' in ckpt:
+        base_ckpt = ckpt['model']
+    elif 'model_state_dict' in ckpt:
+        base_ckpt = ckpt['model_state_dict']
+    else:
+        raise KeyError(
+            "Checkpoint must contain one of: 'base_model', 'model', 'model_state_dict'"
+        )
+    
+    # 移除分布式训练的前缀（如果有）
+    base_ckpt = {k.replace("module.", ""): v for k, v in base_ckpt.items()}
+    
+    # 提取 MAE_encoder 部分的权重
+    # 将 MAE_encoder.xxx -> xxx
+    new_ckpt = {}
+    for k, v in base_ckpt.items():
+        if k.startswith('MAE_encoder.'):
+            # 移除 MAE_encoder 前缀
+            new_key = k[len('MAE_encoder.'):]
+            new_ckpt[new_key] = v
+        elif k.startswith('base_model.'):
+            # 移除 base_model 前缀（如果存在）
+            new_key = k[len('base_model.'):]
+            new_ckpt[new_key] = v
+        else:
+            # 直接使用（可能是其他部分）
+            new_ckpt[k] = v
+    
+    # 加载权重（非严格模式）
+    incompatible = model.load_state_dict(new_ckpt, strict=False)
+    missing_keys = incompatible.missing_keys
+    unexpected_keys = incompatible.unexpected_keys
+    
+    if verbose:
+        if missing_keys:
+            print(f"\n[Checkpoint Loader] Missing keys ({len(missing_keys)}):")
+            # 只显示前10个
+            for key in missing_keys[:10]:
+                print(f"  - {key}")
+            if len(missing_keys) > 10:
+                print(f"  ... and {len(missing_keys) - 10} more")
+        
+        if unexpected_keys:
+            print(f"\n[Checkpoint Loader] Unexpected keys ({len(unexpected_keys)}):")
+            # 只显示前10个
+            for key in unexpected_keys[:10]:
+                print(f"  - {key}")
+            if len(unexpected_keys) > 10:
+                print(f"  ... and {len(unexpected_keys) - 10} more")
+        
+        # 统计成功加载的键
+        loaded_keys = set(new_ckpt.keys()) - set(missing_keys)
+        print(f"\n[Checkpoint Loader] Successfully loaded {len(loaded_keys)}/{len(new_ckpt)} parameters")
+        if loaded_keys:
+            print(f"[Checkpoint Loader] Loaded keys ({len(loaded_keys)}):")
+            # 只显示前10个
+            for key in sorted(loaded_keys)[:10]:
+                print(f"  - {key}")
+            if len(loaded_keys) > 10:
+                print(f"  ... and {len(loaded_keys) - 10} more")
+        print(f"[Checkpoint Loader] Checkpoint loaded from: {ckpt_path}")
+    
+    return missing_keys, unexpected_keys
 
 def parse_args():
     parser = argparse.ArgumentParser('Model')
     parser.add_argument('--model', type=str, default='risurconv_part_seg', help='model name')
-    parser.add_argument('--batch_size', type=int, default=32, help='batch Size during training')
+    parser.add_argument('--batch_size', type=int, default=16, help='batch Size during training')
     parser.add_argument('--epoch', default=250, type=int, help='epoch to run')
     parser.add_argument('--learning_rate', default=0.001, type=float, help='initial learning rate')
     parser.add_argument('--gpu', type=str, default='0', help='specify GPU devices')
@@ -58,17 +150,15 @@ def parse_args():
     parser.add_argument('--normal', type=bool, default=True, help='use normals')
     parser.add_argument('--step_size', type=int, default=20, help='decay step for lr decay')
     parser.add_argument('--lr_decay', type=float, default=0.5, help='decay rate for lr decay')
+    parser.add_argument('--pretrain', type=str, default=None, help='path to pretrained checkpoint (e.g., checkpoint/pretrain.pth)')
     return parser.parse_args()
-
 
 def main(args):
     def log_string(str):
-        try:
-            logger.info(str)
-        except (OSError, IOError) as e:
-            # 磁盘空间不足或其他IO错误时，只打印到控制台，不中断训练
-            print(f"[日志写入失败: {e}]", file=sys.stderr)
+        logger.info(str)
         print(str)
+
+    
 
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -101,7 +191,7 @@ def main(args):
     log_string('PARAMETER ...')
     log_string(args)
 
-    root = '/data2/wangyuansong/data/PointMAEdata/shapenetcore_partanno_segmentation_benchmark_v0_normal/'
+    root = '/data2/wangyuansong/data/PointMAEdata/shapenetcore_partanno_segmentation_benchmark_v0_normal'
 
     TRAIN_DATASET = PartNormalDataset(root=root, npoints=args.npoint, split='trainval', normal_channel=args.normal)
     trainDataLoader = torch.utils.data.DataLoader(TRAIN_DATASET, batch_size=args.batch_size, shuffle=True, num_workers=10, drop_last=True)
@@ -121,7 +211,7 @@ def main(args):
     classifier = MODEL.get_model(num_part, normal_channel=args.normal).cuda()
     criterion = MODEL.get_loss().cuda()
     classifier.apply(inplace_relu)
-
+    
     def weights_init(m):
         classname = m.__class__.__name__
         if classname.find('Conv2d') != -1:
@@ -130,6 +220,20 @@ def main(args):
         elif classname.find('Linear') != -1:
             torch.nn.init.xavier_normal_(m.weight.data)
             torch.nn.init.constant_(m.bias.data, 0.0)
+
+    # 加载预训练 checkpoint（如果提供）
+    if args.pretrain is not None:
+        pretrain_path = args.pretrain
+        if not os.path.isabs(pretrain_path):
+            pretrain_path = os.path.join(BASE_DIR, pretrain_path)
+        if os.path.exists(pretrain_path):
+            log_string(f'Loading pretrained checkpoint from: {pretrain_path}')
+            missing_keys, unexpected_keys = load_pointmae_checkpoint(
+                classifier, pretrain_path, verbose=True
+            )
+            log_string(f'Pretrained checkpoint loaded successfully!')
+        else:
+            log_string(f'Warning: Pretrained checkpoint not found at {pretrain_path}, training from scratch!')
 
     try:
         checkpoint = torch.load(str(exp_dir) + '/checkpoints/best_model.pth')
@@ -164,7 +268,8 @@ def main(args):
     global_epoch = 0
     best_class_avg_iou = 0
     best_inctance_avg_iou = 0
-    log_string('This is pointmae version of segmentation')
+
+    log_string('pointmae, load pretrain checkpoint on shapenet')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
@@ -184,8 +289,11 @@ def main(args):
         for i, (points, label, target) in tqdm(enumerate(trainDataLoader), total=len(trainDataLoader), smoothing=0.9):
             optimizer.zero_grad()
             points = points.data.numpy()
-            points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3])
-            points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3])
+
+            # log_string('without data augmentation_train_partseg.py, line 182')
+            points[:, :, 0:3] = provider.random_scale_point_cloud(points[:, :, 0:3]) # 随机缩放
+            points[:, :, 0:3] = provider.shift_point_cloud(points[:, :, 0:3]) # 随机平移
+            
             points = torch.Tensor(points)
             points, label, target = points.float().cuda(), label.long().cuda(), target.long().cuda()
 
@@ -268,7 +376,7 @@ def main(args):
         log_string('Epoch %d test Accuracy: %f  Class avg mIOU: %f   Inctance avg IOU: %f' % (
             epoch + 1, test_metrics['accuracy'], test_metrics['class_avg_iou'], test_metrics['inctance_avg_iou']))
         if (test_metrics['inctance_avg_iou'] >= best_inctance_avg_iou):
-            log_string('Save model...')
+            logger.info('Save model...')
             savepath = str(checkpoints_dir) + '/best_model.pth'
             log_string('Saving at %s' % savepath)
             state = {
