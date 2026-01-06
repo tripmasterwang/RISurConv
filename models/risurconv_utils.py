@@ -519,7 +519,7 @@ class RISurConvSetAbstraction(nn.Module):
         # embed
         ri_feat=F.relu(self.embedding(ri_feat.permute(0, 3, 2, 1)))  
 
-        # ri_feat = self.self_attention_0(ri_feat)
+        ri_feat = self.self_attention_0(ri_feat)
 
         # concat previous layer features
         if points is not None:
@@ -535,7 +535,7 @@ class RISurConvSetAbstraction(nn.Module):
         new_points = F.relu(self.risurconv(new_points))  #128,16,256；  16是紧邻数
 
         risur_feat = torch.max(new_points, 2)[0]  # maxpooling
-        risur_feat = self.self_attention_1(risur_feat)
+        # risur_feat = self.self_attention_1(risur_feat)
         
         return new_xyz, new_norm, risur_feat   #256个点，纬度分别是3,3,128
 
@@ -582,7 +582,6 @@ class RIConv2FeaturePropagation(nn.Module):
         B, N, C = xyz1.shape
         _, S, _ = xyz2.shape
 
-                   
         ri_feat, idx_ordered = sample_and_group_deconv(self.nsample, xyz2, norm2, xyz1, norm1)
         # embeding
         ri_feat=F.relu(self.embedding(ri_feat.permute(0, 3, 2, 1)))  
@@ -602,7 +601,7 @@ class RIConv2FeaturePropagation(nn.Module):
         # risurconv
         new_points = F.relu(self.risurconv(new_points))
         new_points = torch.max(new_points, 2)[0]  # maxpooling
-        new_points = self.self_attention_1(new_points)
+        # new_points = self.self_attention_1(new_points)
 
         # mlp block
         if points1 is not None:

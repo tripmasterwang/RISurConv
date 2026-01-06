@@ -160,7 +160,7 @@ def main(args):
     best_inctance_avg_iou = 0
 
     log_string('pointnet version, without rotation invariant features, only xyz')
-    log_string('pointnet version, further delete the attention layer in RIConv')
+    log_string('pointnet version, further delete all the attention1 layer(attention among point groups)')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
