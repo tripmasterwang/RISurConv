@@ -161,6 +161,7 @@ def main(args):
 
     log_string('pointnet version, without rotation invariant features, only xyz')
     log_string('pointnet version, further delete all the attention1 layer(attention among point groups)')
+    log_string('Risur features is only extracted in the first encoder block, making it similar to traditional UNET')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))

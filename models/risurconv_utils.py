@@ -539,7 +539,80 @@ class RISurConvSetAbstraction(nn.Module):
         
         return new_xyz, new_norm, risur_feat   #256个点，纬度分别是3,3,128
 
+class RISurConvSetAbstraction_no_risur(nn.Module):
+    def __init__(self, npoint, radius, nsample, in_channel, out_channel, group_all):
+        super(RISurConvSetAbstraction_no_risur, self).__init__()
 
+        self.npoint = npoint
+        self.radius = radius
+        self.nsample = nsample
+        self.group_all = group_all
+        
+        raw_in_channel= [3, 32]
+        raw_out_channel=[32, 64]
+        
+        self.embedding=nn.Sequential(
+            nn.Conv2d(raw_in_channel[0], raw_out_channel[0], kernel_size=1, bias=False),
+            nn.BatchNorm2d(raw_out_channel[0]),
+            nn.Conv2d(raw_in_channel[1], raw_out_channel[1], kernel_size=1, bias=False),
+            nn.BatchNorm2d(raw_out_channel[1])
+        )
+        self.self_attention_0 = SA_Layer_2d(raw_out_channel[1])  # 1st SA layer
+
+        self.risurconv=nn.Sequential(
+            nn.Conv2d(in_channel, out_channel, 1),
+            nn.BatchNorm2d(out_channel)
+        )
+        self.self_attention_1 = SA_Layer(out_channel) # 2nd SA layer
+
+    def forward(self, xyz, norm, points):
+        """
+        Input:
+            surface_data: input surface center point position data, [B, N, 6]
+            feature: input old feature data, [B, C, N]
+        Return:
+            surface data : sampled new surface data, [B, new_N, 6]
+            feature: output new feature data, [B, C, new_N]
+        """
+
+        if points is not None:  # transform from [B, C, N] to [B, N, C]
+            points = points.permute(0, 2, 1)
+
+        B, N, C = xyz.shape
+  
+        if self.group_all:
+            new_xyz, ri_feat, new_norm, idx = sample_and_group_all(xyz, norm)
+        else:
+            new_xyz, ri_feat, new_norm, idx = sample_and_group(self.npoint, self.radius, self.nsample, xyz, norm)
+            # new_xyz:[b,256,3];  ri_feat:[b,256,16,14];  new_norm:[b,256,3];   idx:[b,256,16]
+        # embed
+        ri_feat=F.relu(self.embedding(ri_feat.permute(0, 3, 2, 1)))  
+
+        ri_feat = self.self_attention_0(ri_feat)
+
+        # concat previous layer features
+        # if points is not None:
+        #     if idx is not None:
+        #         grouped_points = index_points(points, idx)
+        #     else:
+        #         grouped_points = points.view(B, 1, N, -1)
+        #     grouped_points = grouped_points.permute(0, 3, 2, 1)
+        #     new_points = torch.cat([ri_feat, grouped_points], dim=1)
+        # else:
+        #     new_points = ri_feat
+
+        if idx is not None:
+            grouped_points = index_points(points, idx)
+        else:
+            grouped_points = points.view(B, 1, N, -1)
+        new_points = grouped_points.permute(0, 3, 2, 1)
+
+        new_points = F.relu(self.risurconv(new_points))  #128,16,256；  16是紧邻数
+
+        risur_feat = torch.max(new_points, 2)[0]  # maxpooling
+        # risur_feat = self.self_attention_1(risur_feat)
+        
+        return new_xyz, new_norm, risur_feat   #256个点，纬度分别是3,3,128
 
 class RIConv2FeaturePropagation(nn.Module):
     def __init__(self, radius, nsample, in_channel, in_channel_2, out_channel, mlp):
@@ -597,6 +670,84 @@ class RIConv2FeaturePropagation(nn.Module):
             new_points = torch.cat([ri_feat, grouped_points], dim=1) # [B, npoint, nsample, C+D]
         else:
             new_points = ri_feat
+
+        # risurconv
+        new_points = F.relu(self.risurconv(new_points))
+        new_points = torch.max(new_points, 2)[0]  # maxpooling
+        # new_points = self.self_attention_1(new_points)
+
+        # mlp block
+        if points1 is not None:
+            new_points = torch.cat([new_points, points1], dim=1)
+            for i, conv in enumerate(self.mlp_convs):
+                bn = self.mlp_bns[i]
+                new_points = F.relu(bn(conv(new_points)))
+
+        return new_points
+
+class RIConv2FeaturePropagation_no_risur(nn.Module):
+    def __init__(self, radius, nsample, in_channel, in_channel_2, out_channel, mlp):
+        super(RIConv2FeaturePropagation_no_risur, self).__init__()
+        self.radius = radius
+        self.nsample = nsample
+        self.mlp_convs = nn.ModuleList()
+        self.mlp_bns = nn.ModuleList()
+
+        # lift to 64
+        raw_in_channel= [3, 32]
+        raw_out_channel=[32, 64]
+        
+        self.embedding=nn.Sequential(
+            nn.Conv2d(raw_in_channel[0], raw_out_channel[0], kernel_size=1, bias=False),
+            nn.BatchNorm2d(raw_out_channel[0]),
+            nn.Conv2d(raw_in_channel[1], raw_out_channel[1], kernel_size=1, bias=False),
+            nn.BatchNorm2d(raw_out_channel[1])
+        )
+
+        self.self_attention_0 = SA_Layer_2d(raw_out_channel[1])  # 1st SA layer
+
+        #concat previous layer features
+        self.risurconv=nn.Sequential(
+            nn.Conv2d(in_channel, out_channel, 1),
+            nn.BatchNorm2d(out_channel)
+        )
+        self.self_attention_1 = SA_Layer(out_channel) # 2nd SA layer
+
+        # mlp block
+        last_channel = in_channel_2
+        for out_channel in mlp:
+            self.mlp_convs.append(nn.Conv1d(last_channel, out_channel, 1))
+            self.mlp_bns.append(nn.BatchNorm1d(out_channel))
+            last_channel = out_channel
+
+    def forward(self, xyz1, xyz2, norm1, norm2, points1, points2):
+
+        points2 = points2.permute(0, 2, 1)
+        B, N, C = xyz1.shape
+        _, S, _ = xyz2.shape
+
+        ri_feat, idx_ordered = sample_and_group_deconv(self.nsample, xyz2, norm2, xyz1, norm1)
+        # embeding
+        ri_feat=F.relu(self.embedding(ri_feat.permute(0, 3, 2, 1)))  
+        ri_feat = self.self_attention_0(ri_feat)  # 1st SA layer
+
+        # concat previous layer features
+        # if points2 is not None:
+        #     if idx_ordered is not None:
+        #         grouped_points = index_points(points2, idx_ordered)
+        #     else:
+        #         grouped_points = points2.view(B, 1, N, -1)
+        #     grouped_points = grouped_points.permute(0, 3, 2, 1)
+        #     new_points = torch.cat([ri_feat, grouped_points], dim=1) # [B, npoint, nsample, C+D]
+        # else:
+        #     new_points = ri_feat
+
+
+        if idx_ordered is not None:
+            grouped_points = index_points(points2, idx_ordered)
+        else:
+            grouped_points = points2.view(B, 1, N, -1)
+        new_points = grouped_points.permute(0, 3, 2, 1)
 
         # risurconv
         new_points = F.relu(self.risurconv(new_points))

@@ -8,7 +8,7 @@ Website: https://wwww.zhiyuanzhang.net
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from risurconv_utils import RISurConvSetAbstraction, RIConv2FeaturePropagation
+from risurconv_utils import RISurConvSetAbstraction, RIConv2FeaturePropagation, RISurConvSetAbstraction_no_risur, RIConv2FeaturePropagation_no_risur
 from time import time
 
 
@@ -20,14 +20,14 @@ class get_model(nn.Module):
         self.normal_channel = normal_channel
         # npoints:FPS采样点数 ，radius:领域搜索半径，nsample：每个采样点的领域点数，in_channel:上一层输出通道数，out_channel:本层输出通道数，group_all:是否进行全局聚合
         self.sa0 = RISurConvSetAbstraction(npoint=512, radius=0.2,  nsample=8, in_channel= 0, out_channel=64,  group_all=False)
-        self.sa1 = RISurConvSetAbstraction(npoint=256,  radius=0.4, nsample=16, in_channel=64, out_channel=128,  group_all=False)
-        self.sa2 = RISurConvSetAbstraction(npoint=128,  radius=0.6, nsample=32, in_channel=128, out_channel=256,  group_all=False)
-        self.sa3 = RISurConvSetAbstraction(npoint=64,  radius=0.8,  nsample=64, in_channel=256, out_channel=512,  group_all=False)
+        self.sa1 = RISurConvSetAbstraction_no_risur(npoint=256,  radius=0.4, nsample=16, in_channel=64, out_channel=128,  group_all=False)
+        self.sa2 = RISurConvSetAbstraction_no_risur(npoint=128,  radius=0.6, nsample=32, in_channel=128, out_channel=256,  group_all=False)
+        self.sa3 = RISurConvSetAbstraction_no_risur(npoint=64,  radius=0.8,  nsample=64, in_channel=256, out_channel=512,  group_all=False)
         # radius:领域搜索半径，nsample：每个采样点的领域点数，in_channel:512是risurconv的输出通道数，64是RISP特征通道数（嵌入后），in_channel_2:risurconv的输出通道数，256是当前层的特征通道数，out_channel:本层输出通道数，mlp:多层感知器
-        self.fp3 = RIConv2FeaturePropagation(radius=1.5, nsample=64, in_channel=512+64, in_channel_2=512+256, out_channel=512, mlp=[512])
-        self.fp2 = RIConv2FeaturePropagation(radius=0.8, nsample=32, in_channel=512+64, in_channel_2=512+128, out_channel=512, mlp=[256])
-        self.fp1 = RIConv2FeaturePropagation(radius=0.48, nsample=32, in_channel=256+64, in_channel_2=256+64, out_channel=256, mlp=[128])
-        self.fp0 = RIConv2FeaturePropagation(radius=0.48, nsample=32,  in_channel=128+64, in_channel_2=128+16, out_channel=128, mlp=[])
+        self.fp3 = RIConv2FeaturePropagation_no_risur(radius=1.5, nsample=64, in_channel=512, in_channel_2=512+256, out_channel=512, mlp=[512])
+        self.fp2 = RIConv2FeaturePropagation_no_risur(radius=0.8, nsample=32, in_channel=512, in_channel_2=512+128, out_channel=512, mlp=[256])
+        self.fp1 = RIConv2FeaturePropagation_no_risur(radius=0.48, nsample=32, in_channel=256, in_channel_2=256+64, out_channel=256, mlp=[128])
+        self.fp0 = RIConv2FeaturePropagation_no_risur(radius=0.48, nsample=32,  in_channel=128, in_channel_2=128+16, out_channel=128, mlp=[])
         self.conv1 = nn.Conv1d(128+self.category_num, 128, 1)
         self.bn1 = nn.BatchNorm1d(128)
         self.drop1 = nn.Dropout(0.4)
