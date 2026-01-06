@@ -28,7 +28,7 @@ class get_model(nn.Module):
         self.fp2 = RIConv2FeaturePropagation(radius=0.8, nsample=32, in_channel=512+64, in_channel_2=512+128, out_channel=512, mlp=[256])
         self.fp1 = RIConv2FeaturePropagation(radius=0.48, nsample=32, in_channel=256+64, in_channel_2=256+64, out_channel=256, mlp=[128])
         self.fp0 = RIConv2FeaturePropagation(radius=0.48, nsample=32,  in_channel=128+64, in_channel_2=128+16, out_channel=128, mlp=[])
-        self.conv1 = nn.Conv1d(128, 128, 1)
+        self.conv1 = nn.Conv1d(128+self.category_num, 128, 1)
         self.bn1 = nn.BatchNorm1d(128)
         self.drop1 = nn.Dropout(0.4)
         self.conv2 = nn.Conv1d(128, num_class, 1)
@@ -47,8 +47,8 @@ class get_model(nn.Module):
         # Feature Propagation layers
         l2_points = self.fp3(l2_xyz, l3_xyz, l2_norm, l3_norm, l2_points, l3_points)  #[B, 512, 64] -> [B, 512, 128]
         l1_points = self.fp2(l1_xyz, l2_xyz, l1_norm, l2_norm, l1_points, l2_points)   #[B, 512, 128] -> [B, 512, 256]
-        l0_points = self.fp1(l0_xyz, l1_xyz, l0_norm, l1_norm, l0_points, l1_points)   #输出[512个点128维特征]
-        cls_label_one_hot = torch.zeros(B, 0, N).cuda()  # 空张量 [B, 0, N]
+        l0_points = self.fp1(l0_xyz, l1_xyz, l0_norm, l1_norm, l0_points, l1_points)
+        cls_label_one_hot = cls_label.view(B,self.category_num,1).repeat(1,1,N).cuda()
         l0_points = self.fp0(xyz, l0_xyz, norm, l0_norm, cls_label_one_hot, l0_points)
         # FC layers
         feat =  F.relu(self.bn1(self.conv1(l0_points)))

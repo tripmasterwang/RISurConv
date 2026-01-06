@@ -42,91 +42,6 @@ def to_categorical(y, num_classes):
         return new_y.cuda()
     return new_y
 
-def load_pointmae_checkpoint(
-    model: nn.Module,
-    ckpt_path: str,
-    verbose: bool = True
-) -> Tuple[list, list]:
-    """
-    从 Point-MAE 预训练 checkpoint 加载权重到模型
-    
-    Args:
-        model: 目标模型（分割网络）
-        ckpt_path: checkpoint 文件路径
-        verbose: 是否打印详细信息
-    
-    Returns:
-        missing_keys: 缺失的键列表
-        unexpected_keys: 多余的键列表
-    """
-    if ckpt_path is None:
-        if verbose:
-            print("No checkpoint path provided, training from scratch!")
-        return [], []
-    
-    # 加载 checkpoint
-    ckpt = torch.load(ckpt_path, map_location='cpu')
-    
-    # 提取模型权重
-    if 'base_model' in ckpt:
-        base_ckpt = ckpt['base_model']
-    elif 'model' in ckpt:
-        base_ckpt = ckpt['model']
-    elif 'model_state_dict' in ckpt:
-        base_ckpt = ckpt['model_state_dict']
-    else:
-        raise KeyError(
-            "Checkpoint must contain one of: 'base_model', 'model', 'model_state_dict'"
-        )
-    
-    # 移除分布式训练的前缀（如果有）
-    base_ckpt = {k.replace("module.", ""): v for k, v in base_ckpt.items()}
-    
-    # 提取 MAE_encoder 部分的权重
-    # 将 MAE_encoder.xxx -> xxx
-    new_ckpt = {}
-    for k, v in base_ckpt.items():
-        if k.startswith('MAE_encoder.'):
-            # 移除 MAE_encoder 前缀
-            new_key = k[len('MAE_encoder.'):]
-            new_ckpt[new_key] = v
-        elif k.startswith('base_model.'):
-            # 移除 base_model 前缀（如果存在）
-            new_key = k[len('base_model.'):]
-            new_ckpt[new_key] = v
-        else:
-            # 直接使用（可能是其他部分）
-            new_ckpt[k] = v
-    
-    # 加载权重（非严格模式）
-    incompatible = model.load_state_dict(new_ckpt, strict=False)
-    missing_keys = incompatible.missing_keys
-    unexpected_keys = incompatible.unexpected_keys
-    
-    if verbose:
-        if missing_keys:
-            print(f"\n[Checkpoint Loader] Missing keys ({len(missing_keys)}):")
-            # 只显示前10个
-            for key in missing_keys[:10]:
-                print(f"  - {key}")
-            if len(missing_keys) > 10:
-                print(f"  ... and {len(missing_keys) - 10} more")
-        
-        if unexpected_keys:
-            print(f"\n[Checkpoint Loader] Unexpected keys ({len(unexpected_keys)}):")
-            # 只显示前10个
-            for key in unexpected_keys[:10]:
-                print(f"  - {key}")
-            if len(unexpected_keys) > 10:
-                print(f"  ... and {len(unexpected_keys) - 10} more")
-        
-        # 统计成功加载的键
-        loaded_keys = set(new_ckpt.keys()) - set(missing_keys)
-        print(f"\n[Checkpoint Loader] Successfully loaded {len(loaded_keys)}/{len(new_ckpt)} parameters")
-        print(f"[Checkpoint Loader] Checkpoint loaded from: {ckpt_path}")
-    
-    return missing_keys, unexpected_keys
-
 
 def parse_args():
     parser = argparse.ArgumentParser('Model')
@@ -148,8 +63,6 @@ def main(args):
     def log_string(str):
         logger.info(str)
         print(str)
-
-    
 
     '''HYPER PARAMETER'''
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -247,7 +160,7 @@ def main(args):
     best_inctance_avg_iou = 0
 
     log_string('pointnet version, without rotation invariant features, only xyz')
-    log_string('pointnet version, further delete the attention layer')
+    log_string('pointnet version, further delete the attention layer in RIConv')
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
