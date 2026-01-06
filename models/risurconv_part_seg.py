@@ -29,10 +29,10 @@ class get_model(nn.Module):
         self.radius=0.2
         self.nsample=8
 
-        self.sa0 = RISurConvSetAbstraction(npoint=512, radius=0.2,  nsample=8, in_channel= 0, out_channel=384,  group_all=False)
+        self.sa0 = RISurConvSetAbstraction(npoint=512, radius=0.2,  nsample=8, in_channel= 0, out_channel=64,  group_all=False)
 
         #以下是pointmae的部分
-        self.mae_trans_dim = 384
+        self.mae_trans_dim = 64
         self.mae_depth = 12
         self.mae_drop_path_rate = 0.1
         self.mae_cls_dim = num_class
@@ -41,7 +41,7 @@ class get_model(nn.Module):
         self.mae_group_size = 32
         self.mae_num_group = 128
         # define the encoder
-        self.mae_encoder_dims = 384
+        self.mae_encoder_dims = 64
 
         self.mae_pos_embed = nn.Sequential(
             nn.Linear(64, 128),

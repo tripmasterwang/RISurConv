@@ -269,7 +269,7 @@ def main(args):
     best_class_avg_iou = 0
     best_inctance_avg_iou = 0
 
-    log_string('pointmae, load pretrain checkpoint on shapenet')
+    log_string('pointmae, load pretrain checkpoint on %s' % args.pretrain)
     for epoch in range(start_epoch, args.epoch):
         mean_correct = []
         log_string('Epoch %d (%d/%s):' % (global_epoch + 1, epoch + 1, args.epoch))
