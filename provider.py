@@ -101,6 +101,27 @@ def rotate_point_cloud_z(batch_data):
         rotated_data[k, ...] = np.dot(shape_pc.reshape((-1, 3)), rotation_matrix)
     return rotated_data
 
+def rotate_point_cloud_z_with_normal(batch_xyz_normal):
+    """ Randomly rotate the point clouds along z-axis with normal vectors
+        Input:
+          BxNx6 array, original batch of point clouds with normal (first 3 channels are xyz, last 3 are normal)
+        Return:
+          BxNx6 array, rotated batch of point clouds with normal
+    """
+    rotated_data = np.zeros(batch_xyz_normal.shape, dtype=np.float32)
+    for k in range(batch_xyz_normal.shape[0]):
+        rotation_angle = np.random.uniform() * 2 * np.pi
+        cosval = np.cos(rotation_angle)
+        sinval = np.sin(rotation_angle)
+        rotation_matrix = np.array([[cosval, sinval, 0],
+                                    [-sinval, cosval, 0],
+                                    [0, 0, 1]])
+        shape_pc = batch_xyz_normal[k, :, 0:3]
+        shape_normal = batch_xyz_normal[k, :, 3:6]
+        rotated_data[k, :, 0:3] = np.dot(shape_pc.reshape((-1, 3)), rotation_matrix)
+        rotated_data[k, :, 3:6] = np.dot(shape_normal.reshape((-1, 3)), rotation_matrix)
+    return rotated_data
+
 def rotate_point_cloud_with_normal(batch_xyz_normal):
     ''' Randomly rotate XYZ, normal point cloud.
         Input:

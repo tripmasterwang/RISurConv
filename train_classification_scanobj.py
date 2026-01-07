@@ -34,6 +34,7 @@ def parse_args():
     parser.add_argument('--learning_rate', default=0.001, type=float, help='learning rate in training')
     parser.add_argument('--num_point', type=int, default=1024, help='Point Number')
     parser.add_argument('--data_type', type=str, default='hardest', help='data type')
+    parser.add_argument('--aug', type=str, default='z/z', help='augmentation type: z/z, SO3/SO3, or z/SO3')
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer for training')
     parser.add_argument('--log_dir', type=str, default=None, help='experiment root')
     parser.add_argument('--decay_rate', type=float, default=1e-4, help='decay rate')
@@ -53,8 +54,20 @@ def test(model, loader,args, num_class=40):
     classifier = model.eval()
     class_acc = np.zeros((num_class, 3))
     for j, (points, target) in tqdm(enumerate(loader), total=len(loader)):
+        # Apply augmentation for test based on aug mode
+        points = points.data.numpy()
+        if args.aug == 'z/z':
+            # Test with z rotation
+            points = provider.rotate_point_cloud_z_with_normal(points)
+        elif args.aug == 'SO3/SO3':
+            # Test with SO3 rotation
+            points = provider.rotate_point_cloud_with_normal_so3(points)
+        elif args.aug == 'z/SO3':
+            # Test with SO3 rotation (different from training)
+            points = provider.rotate_point_cloud_with_normal_so3(points)
+        points = torch.Tensor(points)
         if not args.use_cpu:
-            points, target = points.cuda(), target.cuda()  
+            points, target = points.cuda(), target.cuda()
         pred, _ = classifier(points)
         if len(pred.shape) == 3:
             pred = pred.mean(dim=1)
@@ -174,6 +187,16 @@ def main(args):
         for batch_id, (points, target) in tqdm(enumerate(trainDataLoader, 0), total=len(trainDataLoader), smoothing=0.9):
             optimizer.zero_grad()
             points = points.data.numpy()
+            # Apply augmentation based on aug mode
+            if args.aug == 'z/z':
+                # Training with z rotation
+                points = provider.rotate_point_cloud_z_with_normal(points)
+            elif args.aug == 'SO3/SO3':
+                # Training with SO3 rotation
+                points = provider.rotate_point_cloud_with_normal_so3(points)
+            elif args.aug == 'z/SO3':
+                # Training with z rotation (test will use SO3)
+                points = provider.rotate_point_cloud_z_with_normal(points)
             points = torch.Tensor(points)
             if not args.use_cpu:
                 points, target = points.cuda(), target.cuda()
